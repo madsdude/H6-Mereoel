@@ -1,0 +1,12 @@
+.git
+.github
+docs
+outputs
+work
+node_modules
+npm-debug.log
+Dockerfile
+compose.yml
+docker-stack.yml
+README.md
+*.md

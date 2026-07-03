@@ -1,6 +1,6 @@
-# MEREOEL lagerhjemmeside
+# MEREØL lagerhjemmeside
 
-En enkel lagerhjemmeside til MEREOEL, pakket som Docker-image og klar til Docker Swarm. Fokus er drift: flere replicas, Nginx reverse proxy, load balancing, health checks, failover og adgang via et faelles DNS-navn.
+En enkel lagerhjemmeside til MEREØL, pakket som Docker-image og klar til Docker Swarm. Fokus er drift: flere replicas, Nginx reverse proxy, load balancing, health checks, failover og adgang via et fælles DNS-navn.
 
 ## Arkitektur
 
@@ -25,6 +25,7 @@ Web-appen er statisk og serveres af en lille Nginx-container. I Swarm ligger der
 - `src/` indeholder lagerhjemmesiden og Nginx-konfigurationen for web-containeren.
 - `docs/SWARM.md` beskriver Swarm, DNS og drift.
 - `docs/TESTPLAN.md` beskriver test af build, load balancing og failover.
+- `.github/workflows/docker-image.yml` bygger og publicerer Docker-imaget til GHCR ved push til `main`.
 
 ## Lokal test
 
@@ -33,7 +34,7 @@ docker compose up --build
 curl http://localhost:8080/healthz
 ```
 
-Aabn derefter `http://localhost:8080`.
+Åbn derefter `http://localhost:8080`.
 
 ## Build image
 
@@ -44,7 +45,7 @@ docker run --rm -p 8080:8080 ghcr.io/madsdude/h6-mereoel:latest
 
 ## Docker Swarm deployment
 
-Foer `docker stack deploy` skal imaget vaere bygget og tilgaengeligt for alle Swarm-noder, for eksempel via GHCR.
+Før `docker stack deploy` skal imaget være bygget og tilgængeligt for alle Swarm-noder, for eksempel via GHCR.
 
 ```bash
 docker swarm init --advertise-addr <MANAGER-IP>
@@ -54,13 +55,13 @@ docker service ps mereoel_web
 docker service ps mereoel_proxy
 ```
 
-Sitet eksponeres paa port 80 paa alle Swarm-noder via routing mesh. Saet DNS-navnet, for eksempel `lager.mereoel.dk`, til en ekstern load balancer foran Swarm-noderne eller til flere A-records mod noderne i et labmiljoe.
+Sitet eksponeres på port 80 på alle Swarm-noder via routing mesh. Sæt DNS-navnet, for eksempel `lager.mereoel.dk`, til en ekstern load balancer foran Swarm-noderne eller til flere A-records mod noderne i et labmiljø.
 
 ## Hurtige driftstests
 
 ```bash
 curl http://lager.mereoel.dk/healthz
-for i in {1..20}; do curl -s http://lager.mereoel.dk/ | grep -o "MEREOEL" | head -n 1; done
+for i in {1..20}; do curl -s http://lager.mereoel.dk/ | grep -o "MEREØL" | head -n 1; done
 
 docker service scale mereoel_web=6
 docker service update --force mereoel_web

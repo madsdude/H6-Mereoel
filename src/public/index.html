@@ -1,0 +1,118 @@
+<!doctype html>
+<html lang="da">
+  <head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>MEREØL Lager</title>
+    <meta name="description" content="Lagerstatus for MEREØL">
+    <link rel="icon" href="/assets/logo.svg" type="image/svg+xml">
+    <link rel="stylesheet" href="/styles.css">
+    <script src="/app.js" defer></script>
+  </head>
+  <body>
+    <header class="topbar">
+      <a class="brand" href="/" aria-label="MEREØL lager forside">
+        <img class="brand-mark" src="/assets/logo.svg" alt="" width="44" height="44">
+        <span>
+          <strong>MEREØL</strong>
+          <small>Lagerstatus</small>
+        </span>
+      </a>
+      <div class="runtime-pill" title="Servicen er pakket til Docker Swarm">
+        <span class="status-dot" aria-hidden="true"></span>
+        Swarm ready
+      </div>
+    </header>
+
+    <main class="shell">
+      <section class="page-title" aria-labelledby="page-heading">
+        <p class="eyebrow">Lageroverblik</p>
+        <h1 id="page-heading">Aktuel beholdning og driftsstatus</h1>
+        <p class="intro">Et kompakt lagerdashboard til øl, fustager og emballage. Siden er bevidst simpel, så Docker, Swarm, load balancing og failover er det centrale i løsningen.</p>
+      </section>
+
+      <section class="summary-grid" aria-label="Nøgletal">
+        <article class="summary-card">
+          <span class="summary-label">Varer på lager</span>
+          <strong id="totalUnits">0</strong>
+          <small>enheder fordelt på lokationer</small>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Varelinjer</span>
+          <strong id="totalLines">0</strong>
+          <small>aktive SKU'er</small>
+        </article>
+        <article class="summary-card attention">
+          <span class="summary-label">Kræver handling</span>
+          <strong id="attentionLines">0</strong>
+          <small>under minimumsgrænse</small>
+        </article>
+        <article class="summary-card">
+          <span class="summary-label">Kapacitet</span>
+          <strong id="capacityUsed">0%</strong>
+          <small>samlet fyldningsgrad</small>
+        </article>
+      </section>
+
+      <section class="toolbar" aria-label="Filtrering">
+        <label class="search-field">
+          <span>Søg</span>
+          <input id="search" type="search" placeholder="Produkt, SKU eller lokation" autocomplete="off">
+        </label>
+        <label class="select-field">
+          <span>Status</span>
+          <select id="statusFilter">
+            <option value="all">Alle</option>
+            <option value="ok">OK</option>
+            <option value="low">Lav beholdning</option>
+            <option value="critical">Kritisk</option>
+          </select>
+        </label>
+      </section>
+
+      <section class="inventory-panel" aria-labelledby="inventory-heading">
+        <div class="panel-header">
+          <div>
+            <h2 id="inventory-heading">Lagerlinjer</h2>
+            <p id="resultCount">0 viste linjer</p>
+          </div>
+          <time id="lastUpdated" datetime=""></time>
+        </div>
+        <div class="table-wrap">
+          <table>
+            <thead>
+              <tr>
+                <th scope="col">Produkt</th>
+                <th scope="col">Type</th>
+                <th scope="col">Lokation</th>
+                <th scope="col">Beholdning</th>
+                <th scope="col">Status</th>
+                <th scope="col">Batch</th>
+              </tr>
+            </thead>
+            <tbody id="inventoryRows"></tbody>
+          </table>
+        </div>
+      </section>
+
+      <section class="ops-strip" aria-label="Driftspunkter">
+        <div>
+          <span>Health endpoint</span>
+          <code>/healthz</code>
+        </div>
+        <div>
+          <span>Web replicas</span>
+          <strong>4</strong>
+        </div>
+        <div>
+          <span>Proxy replicas</span>
+          <strong>2</strong>
+        </div>
+        <div>
+          <span>Adgang</span>
+          <strong>DNS på port 80</strong>
+        </div>
+      </section>
+    </main>
+  </body>
+</html>

@@ -1,0 +1,38 @@
+name: mereoel
+
+services:
+  web:
+    build:
+      context: .
+    image: mereoel-lager:local
+    expose:
+      - "8080"
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+  proxy:
+    image: nginx:1.27-alpine
+    depends_on:
+      web:
+        condition: service_healthy
+    ports:
+      - "8080:80"
+    volumes:
+      - ./deploy/nginx-proxy.conf:/etc/nginx/nginx.conf:ro
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+
+networks:
+  app:

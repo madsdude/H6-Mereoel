@@ -1,0 +1,97 @@
+version: "3.9"
+
+services:
+  web:
+    image: ${MEREOEL_IMAGE:-ghcr.io/madsdude/h6-mereoel:latest}
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1:8080/healthz || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    deploy:
+      replicas: 4
+      endpoint_mode: vip
+      placement:
+        preferences:
+          - spread: node.id
+      restart_policy:
+        condition: any
+        delay: 5s
+        window: 120s
+      update_config:
+        parallelism: 2
+        delay: 10s
+        monitor: 30s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 2
+        delay: 5s
+        monitor: 30s
+        order: start-first
+      resources:
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+        limits:
+          cpus: "0.25"
+          memory: 128M
+
+  proxy:
+    image: nginx:1.27-alpine
+    ports:
+      - target: 80
+        published: 80
+        protocol: tcp
+        mode: ingress
+    configs:
+      - source: proxy_nginx_conf
+        target: /etc/nginx/nginx.conf
+    networks:
+      - app
+    healthcheck:
+      test: ["CMD-SHELL", "wget -q -O /dev/null http://127.0.0.1/healthz || exit 1"]
+      interval: 30s
+      timeout: 3s
+      retries: 3
+      start_period: 10s
+    deploy:
+      replicas: 2
+      endpoint_mode: vip
+      placement:
+        preferences:
+          - spread: node.id
+      restart_policy:
+        condition: any
+        delay: 5s
+        window: 120s
+      update_config:
+        parallelism: 1
+        delay: 10s
+        monitor: 30s
+        failure_action: rollback
+        order: start-first
+      rollback_config:
+        parallelism: 1
+        delay: 5s
+        monitor: 30s
+        order: start-first
+      resources:
+        reservations:
+          cpus: "0.05"
+          memory: 32M
+        limits:
+          cpus: "0.20"
+          memory: 96M
+
+configs:
+  proxy_nginx_conf:
+    file: ./deploy/nginx-proxy.conf
+
+networks:
+  app:
+    driver: overlay
+    attachable: true

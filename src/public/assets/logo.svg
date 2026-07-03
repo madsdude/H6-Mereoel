@@ -1,0 +1,10 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 96 96" role="img" aria-labelledby="title desc">
+  <title id="title">MEREØL logo</title>
+  <desc id="desc">Rundt logo med ølglas og lagerlinje</desc>
+  <circle cx="48" cy="48" r="44" fill="#0f766e"/>
+  <path d="M30 26h28c7 0 13 6 13 13s-6 13-13 13h-2v18c0 5-4 9-9 9H35c-5 0-9-4-9-9V30c0-2 2-4 4-4Z" fill="#ffffff"/>
+  <path d="M56 35h3c3 0 5 2 5 5s-2 5-5 5h-3V35Z" fill="#0f766e"/>
+  <path d="M34 38h16v31H34V38Z" fill="#f2b84b"/>
+  <path d="M34 38h16v8H34v-8Z" fill="#ffffff" opacity="0.9"/>
+  <path d="M26 76h44" stroke="#ffffff" stroke-width="5" stroke-linecap="round" opacity="0.8"/>
+</svg>
