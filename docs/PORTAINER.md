@@ -2,6 +2,8 @@
 
 Denne guide viser, hvordan du installerer Portainer CE i Docker Swarm og får både manager- og worker-noder vist i Portainer. Portainer installeres som en Swarm stack på manageren. Worker-noder skal ikke tilføjes manuelt i GUI'en, så længe de allerede er joined til samme Swarm.
 
+Vigtigt: Manager og worker skal normalt ikke oprettes som to separate `Edge Agent` environments. I et almindeligt Docker Swarm setup skal Portainer vise ét Swarm environment, og inde i det environment kan du se både manager- og worker-noder under `Nodes`.
+
 Officiel Portainer Swarm-installation: https://docs.portainer.io/start/install-ce/server/swarm/linux
 
 ## 1. Forudsætninger
@@ -111,7 +113,81 @@ Ved første login:
 2. Vælg det lokale Swarm environment, hvis Portainer spørger.
 3. Gå ind på environmentet for at se Swarm clusteret.
 
-## 5. Se manager og worker i Portainer
+## 5. Hvis du ser Edge Agent Standard og Disconnected
+
+Hvis Portainer viser to environments som `Manager` og `Worker`, og begge står som `Edge Agent Standard` samt `Disconnected`, er de oprettet med den forkerte environment-type.
+
+Det betyder:
+
+- Portainer venter på en Edge Agent, som selv skal forbinde tilbage til Portainer.
+- Der er ingen snapshot, fordi Edge Agent ikke kører eller ikke har connected.
+- Du kan ikke styre Swarm services, stacks eller nodes ordentligt fra disse entries.
+
+Til denne opgave skal du bruge Portainer Agent til Docker Swarm, ikke Edge Agent.
+
+### Ryd de forkerte Edge environments op
+
+I Portainer GUI:
+
+1. Gå til `Environments`.
+2. Åbn `Manager` environmentet med tandhjul eller edit-knappen.
+3. Vælg `Delete environment` eller `Remove environment`.
+4. Gentag for `Worker`.
+
+Dette sletter kun Portainers registrering af environmentet. Det sletter ikke dine Docker-noder eller Swarm clusteret.
+
+### Kontroller den rigtige Swarm-installation
+
+På manageren:
+
+```bash
+sudo docker stack services portainer
+sudo docker service ps portainer_portainer
+sudo docker service ps portainer_agent
+```
+
+Forventet ved 1 manager og 1 worker:
+
+```text
+portainer_portainer   1/1
+portainer_agent       2/2
+```
+
+Hvis Portainer-stack ikke findes eller agenten ikke kører på alle noder, deploy den igen:
+
+```bash
+curl -L https://downloads.portainer.io/ce-lts/portainer-agent-stack.yml -o portainer-agent-stack.yml
+sudo docker stack deploy -c portainer-agent-stack.yml portainer
+```
+
+Log derefter ind på:
+
+```text
+https://10.1.10.10:9443
+```
+
+Du skal ende med ét Docker Swarm environment. Inde i det environment skal både manager og worker vises under `Nodes`.
+
+### Hvis Portainer ikke automatisk viser Swarm environmentet
+
+Hvis Portainer stadig kun viser de forkerte Edge environments efter oprydning, kan du oprette det rigtige environment manuelt:
+
+1. Gå til `Environments`.
+2. Vælg `Add environment`.
+3. Vælg `Docker Swarm` eller `Docker` med connection type `Agent`.
+4. Brug navn: `MEREOEL Swarm`.
+5. Brug agent address: `tasks.agent:9001`.
+6. Gem environmentet.
+
+Hvis `tasks.agent:9001` ikke accepteres i din Portainer-version, prøv i stedet:
+
+```text
+portainer_agent:9001
+```
+
+Det rigtige environment skal ikke stå som `Edge Agent Standard`. Det skal være et Docker/Swarm environment via Agent.
+
+## 6. Se manager og worker i Portainer
 
 I Portainer:
 
@@ -141,7 +217,7 @@ sudo docker service ps portainer_agent --no-trunc
 sudo docker service logs --tail 80 portainer_agent
 ```
 
-## 6. Se MEREØL-stacken i Portainer
+## 7. Se MEREØL-stacken i Portainer
 
 Når Portainer er oppe, kan MEREØL-løsningen ses i GUI'en.
 
@@ -165,7 +241,7 @@ sudo docker service ps mereoel_web
 sudo docker service ps mereoel_proxy
 ```
 
-## 7. Test failover visuelt
+## 8. Test failover visuelt
 
 Portainer er god til at demonstrere failover.
 
@@ -211,7 +287,7 @@ Aktiver noden igen:
 sudo docker node update --availability active <WORKER-NODE-NAME>
 ```
 
-## 8. Almindelig fejlfinding
+## 9. Almindelig fejlfinding
 
 ### Portainer GUI åbner ikke
 
@@ -255,7 +331,7 @@ nc -vz <MANAGER-IP> 9001
 
 UDP-porte som `4789/udp` er sværere at teste med `nc`, men de skal være åbne mellem noderne for overlay networks.
 
-## 9. Fjern Portainer igen
+## 10. Fjern Portainer igen
 
 Hvis Portainer skal fjernes:
 
