@@ -9,6 +9,10 @@ Denne løsning er lavet til Docker Swarm med en separat Nginx reverse proxy fora
 - Et Docker-image, som alle noder kan hente. Eksempel: `ghcr.io/madsdude/h6-mereoel:latest`.
 - Et DNS-navn til adgang, for eksempel `lager.mereoel.dk`.
 
+## Portainer GUI
+
+Portainer kan installeres oven på samme Swarm og bruges til at se manager, worker, stacks, services, replicas, logs og failover visuelt. Se `docs/PORTAINER.md` for en trin-for-trin guide.
+
 ## Swarm-porte mellem noder
 
 I et multi-node Swarm setup skal noderne kunne tale sammen på Docker Swarm-portene. Hvis de ikke kan det, kan enkelte proxy- eller web-tasks virke, mens andre giver `502 Bad Gateway`.
