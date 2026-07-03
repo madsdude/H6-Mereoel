@@ -36,6 +36,12 @@ curl http://localhost:8080/healthz
 
 Åbn derefter `http://localhost:8080`.
 
+Ryd lokal Compose-test op før Swarm-deploy, hvis du har testet lokalt på samme maskine:
+
+```bash
+docker compose down --remove-orphans
+```
+
 ## Build image
 
 ```bash
@@ -45,10 +51,11 @@ docker run --rm -p 8080:8080 ghcr.io/madsdude/h6-mereoel:latest
 
 ## Docker Swarm deployment
 
-Før `docker stack deploy` skal imaget være bygget og tilgængeligt for alle Swarm-noder, for eksempel via GHCR.
+Før `docker stack deploy` skal imaget være bygget og tilgængeligt for alle Swarm-noder, for eksempel via GHCR. I et enkelt-node lab kan du bygge imaget lokalt med samme tag før deployment.
 
 ```bash
 docker swarm init --advertise-addr <MANAGER-IP>
+docker build -t ghcr.io/madsdude/h6-mereoel:latest .
 docker stack deploy -c docker-stack.yml mereoel
 docker service ls
 docker service ps mereoel_web
@@ -56,6 +63,31 @@ docker service ps mereoel_proxy
 ```
 
 Sitet eksponeres på port 80 på alle Swarm-noder via routing mesh. Sæt DNS-navnet, for eksempel `lager.mereoel.dk`, til en ekstern load balancer foran Swarm-noderne eller til flere A-records mod noderne i et labmiljø.
+
+## Fejlfinding
+
+Hvis `docker stack deploy` fejler med `network with name mereoel_app already exists`, ligger der et gammelt Docker-network med samme navn. Det sker typisk efter lokal Compose-test eller et tidligere afbrudt stack-deploy.
+
+```bash
+docker network inspect mereoel_app --format '{{.Name}} {{.Driver}} {{.Scope}}'
+```
+
+Hvis networket er `bridge`, ryd lokal Compose-test op:
+
+```bash
+docker compose down --remove-orphans
+docker network rm mereoel_app
+```
+
+Hvis networket er `overlay`, ryd stacken op og deploy igen:
+
+```bash
+docker stack rm mereoel
+docker network rm mereoel_app
+docker stack deploy -c docker-stack.yml mereoel
+```
+
+Hvis du får `permission denied while trying to connect to the docker API`, skal kommandoen køres med `sudo`, eller også skal brugeren tilføjes Docker-gruppen og logge ind igen.
 
 ## Hurtige driftstests
 
