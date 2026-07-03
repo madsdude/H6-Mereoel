@@ -9,6 +9,30 @@ Denne løsning er lavet til Docker Swarm med en separat Nginx reverse proxy fora
 - Et Docker-image, som alle noder kan hente. Eksempel: `ghcr.io/madsdude/h6-mereoel:latest`.
 - Et DNS-navn til adgang, for eksempel `lager.mereoel.dk`.
 
+## Swarm-porte mellem noder
+
+I et multi-node Swarm setup skal noderne kunne tale sammen på Docker Swarm-portene. Hvis de ikke kan det, kan enkelte proxy- eller web-tasks virke, mens andre giver `502 Bad Gateway`.
+
+Åbn disse porte mellem Swarm-noderne:
+
+- `2377/tcp` til manager-noder for cluster management.
+- `7946/tcp` og `7946/udp` mellem alle noder for node discovery.
+- `4789/udp` mellem alle noder for overlay network traffic.
+- `80/tcp` mod de noder, som brugere eller load balanceren skal ramme.
+
+Med `ufw` i et labmiljø kan det for eksempel være:
+
+```bash
+sudo ufw allow 2377/tcp
+sudo ufw allow 7946/tcp
+sudo ufw allow 7946/udp
+sudo ufw allow 4789/udp
+sudo ufw allow 80/tcp
+sudo ufw reload
+```
+
+Hvis noderne kører i en cloud, skal de samme porte også åbnes i security groups/firewall-regler mellem noderne.
+
 ## Docker-rettigheder
 
 Hvis du får denne fejl:
@@ -130,7 +154,7 @@ sudo docker service ls
 
 ## Fejlfinding: healthz virker, men forsiden giver 502
 
-Hvis `curl http://10.1.10.10/healthz` svarer `ok`, men `curl http://10.1.10.10` giver `502 Bad Gateway`, er proxyen startet, men den kan ikke nå web-servicen.
+Hvis `curl http://10.1.10.10/healthz` svarer `ok`, men `curl http://10.1.10.10` giver `502 Bad Gateway`, er proxyen startet, men den kan ikke nå web-servicen stabilt.
 
 Kontroller først web og proxy:
 
@@ -154,6 +178,37 @@ Test derefter upstream gennem proxyen:
 ```bash
 curl http://10.1.10.10/upstream-health
 curl http://10.1.10.10
+```
+
+## Fejlfinding: skiftevis 200 og 502
+
+Hvis en loop-test skifter mellem `200` og `502`, rammer Swarm routing mesh sandsynligvis skiftevis en proxy-task der virker og en proxy-task der ikke kan nå web-upstreamen:
+
+```bash
+for i in {1..10}; do curl -s -o /dev/null -w "%{http_code}\n" http://10.1.10.10/; done
+```
+
+Typiske årsager:
+
+- Proxyen har startet før web-servicen var registreret i Docker DNS.
+- En proxy-task har cached en upstream-IP, som ikke længere er korrekt.
+- Overlay network mellem noderne mangler portene `7946/tcp`, `7946/udp` eller `4789/udp`.
+- En worker-node kan køre containers, men data-plane trafik mellem noderne er blokeret af firewall eller security group.
+
+Tjek først hvilke proxy-tasks der fejler:
+
+```bash
+sudo docker service ps mereoel_proxy --no-trunc
+sudo docker service logs --tail 80 mereoel_proxy
+```
+
+Hvis loggen viser `connect() failed (111: Connection refused) while connecting to upstream`, så tjek overlay-porte mellem noderne og deploy igen efter seneste proxy-konfig:
+
+```bash
+git pull
+sudo docker stack rm mereoel
+sleep 10
+sudo docker stack deploy -c docker-stack.yml mereoel
 ```
 
 ## DNS og fælles adgangsnavn
