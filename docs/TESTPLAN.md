@@ -45,11 +45,18 @@ sudo docker stack deploy -c docker-stack.yml mereoel
 sudo docker service ls
 ```
 
+Vent med HTTP-test, til services viser ønsket antal replicas:
+
+```bash
+watch -n 2 'sudo docker service ls'
+```
+
 Forventet:
 
 - `mereoel_web` viser `4/4` replicas.
 - `mereoel_proxy` viser `2/2` replicas.
 - `curl http://<NODE-IP>/healthz` returnerer `ok`.
+- `curl http://<NODE-IP>/upstream-health` returnerer `ok`.
 
 Hvis deploy fejler med `network with name mereoel_app already exists`, se typen og ryd op:
 
@@ -63,13 +70,13 @@ sudo docker stack deploy -c docker-stack.yml mereoel
 
 ## 4. Load balancing
 
-Kør flere requests mod DNS-navnet eller en node-IP:
+Kør flere requests mod DNS-navnet eller en node-IP, når `sudo docker service ls` viser `mereoel_proxy 2/2` og `mereoel_web 4/4`:
 
 ```bash
-for i in {1..30}; do curl -s http://<NODE-IP>/healthz; done
+for i in {1..30}; do curl -s -o /dev/null -w "%{http_code}\n" http://<NODE-IP>/; done
 ```
 
-Forventet: Alle svarer `ok`. Kontroller access logs på proxy-tasks for at se trafik gennem flere proxy-containere:
+Forventet: Alle svarer `200`. Kontroller access logs på proxy-tasks for at se trafik gennem flere proxy-containere:
 
 ```bash
 sudo docker service logs --tail 50 mereoel_proxy
