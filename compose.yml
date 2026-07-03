@@ -1,4 +1,4 @@
-name: mereoel
+name: mereoel-local
 
 services:
   web:
