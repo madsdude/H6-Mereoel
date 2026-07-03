@@ -9,6 +9,23 @@ Denne løsning er lavet til Docker Swarm med en separat Nginx reverse proxy fora
 - Et Docker-image, som alle noder kan hente. Eksempel: `ghcr.io/madsdude/h6-mereoel:latest`.
 - Et DNS-navn til adgang, for eksempel `lager.mereoel.dk`.
 
+## Docker-rettigheder
+
+Hvis du får denne fejl:
+
+```text
+permission denied while trying to connect to the docker API at unix:///var/run/docker.sock
+```
+
+så kør Docker-kommandoerne med `sudo`, eller tilføj brugeren til Docker-gruppen og log ind igen:
+
+```bash
+sudo usermod -aG docker $USER
+newgrp docker
+```
+
+I et skole- eller labmiljø er det ofte hurtigst bare at bruge `sudo docker ...` konsekvent.
+
 ## Byg og publicer image
 
 GitHub Actions workflowet bygger automatisk imaget ved push til `main`. Hvis du vil gøre det manuelt:
@@ -20,30 +37,36 @@ docker push ghcr.io/madsdude/h6-mereoel:latest
 
 Hvis GHCR-pakken er privat, skal alle Swarm-noder kunne hente imaget. Log ind på noderne eller brug en registry secret efter jeres normale driftspolitik.
 
+Til et enkelt-node lab kan du bygge imaget lokalt med samme tag og derefter deploye stacken på samme node:
+
+```bash
+sudo docker build -t ghcr.io/madsdude/h6-mereoel:latest .
+```
+
 ## Initier Swarm
 
 På manager-noden:
 
 ```bash
-docker swarm init --advertise-addr <MANAGER-IP>
+sudo docker swarm init --advertise-addr <MANAGER-IP>
 ```
 
 Tilføj worker-noder med join-kommandoen fra `docker swarm init`, eller hent den igen:
 
 ```bash
-docker swarm join-token worker
+sudo docker swarm join-token worker
 ```
 
 ## Deploy stack
 
 ```bash
-docker stack deploy -c docker-stack.yml mereoel
+sudo docker stack deploy -c docker-stack.yml mereoel
 ```
 
 Hvis du vil bruge et andet image-tag:
 
 ```bash
-MEREOEL_IMAGE=ghcr.io/madsdude/h6-mereoel:sha-<commit> docker stack deploy -c docker-stack.yml mereoel
+sudo MEREOEL_IMAGE=ghcr.io/madsdude/h6-mereoel:sha-<commit> docker stack deploy -c docker-stack.yml mereoel
 ```
 
 ## Services
@@ -56,9 +79,46 @@ Stacken opretter to services:
 Kontroller status:
 
 ```bash
-docker service ls
-docker service ps mereoel_proxy
-docker service ps mereoel_web
+sudo docker service ls
+sudo docker service ps mereoel_proxy
+sudo docker service ps mereoel_web
+```
+
+## Fejlfinding: network findes allerede
+
+Hvis deploy fejler med:
+
+```text
+failed to create network mereoel_app: Error response from daemon: network with name mereoel_app already exists
+```
+
+så findes der allerede et Docker-network med samme navn. Se først typen:
+
+```bash
+sudo docker network inspect mereoel_app --format '{{.Name}} {{.Driver}} {{.Scope}}'
+```
+
+Hvis den viser `bridge`, kommer networket typisk fra lokal Compose-test. Ryd op sådan:
+
+```bash
+sudo docker compose down --remove-orphans
+sudo docker network rm mereoel_app
+sudo docker stack deploy -c docker-stack.yml mereoel
+```
+
+Hvis den viser `overlay`, er det typisk en gammel eller halv-oprettet Swarm-stack. Ryd op sådan:
+
+```bash
+sudo docker stack rm mereoel
+sudo docker network rm mereoel_app
+sudo docker stack deploy -c docker-stack.yml mereoel
+```
+
+Hvis `docker network rm` siger, at networket er i brug, find containerne eller services først:
+
+```bash
+sudo docker ps -a --filter network=mereoel_app
+sudo docker service ls
 ```
 
 ## DNS og fælles adgangsnavn
@@ -91,15 +151,15 @@ Containerfejl håndteres af Swarm restart policy. Nodefejl håndteres ved, at Sw
 Test en planlagt node-drain:
 
 ```bash
-docker node update --availability drain <NODE-NAME>
-docker service ps mereoel_web
-docker service ps mereoel_proxy
+sudo docker node update --availability drain <NODE-NAME>
+sudo docker service ps mereoel_web
+sudo docker service ps mereoel_proxy
 ```
 
 Sæt noden tilbage:
 
 ```bash
-docker node update --availability active <NODE-NAME>
+sudo docker node update --availability active <NODE-NAME>
 ```
 
 ## Skalering og opdatering
@@ -107,17 +167,17 @@ docker node update --availability active <NODE-NAME>
 Skaler web-servicen:
 
 ```bash
-docker service scale mereoel_web=6
+sudo docker service scale mereoel_web=6
 ```
 
 Rul en ny version ud:
 
 ```bash
-MEREOEL_IMAGE=ghcr.io/madsdude/h6-mereoel:sha-<commit> docker stack deploy -c docker-stack.yml mereoel
+sudo MEREOEL_IMAGE=ghcr.io/madsdude/h6-mereoel:sha-<commit> docker stack deploy -c docker-stack.yml mereoel
 ```
 
 Hvis en opdatering fejler, er `failure_action: rollback` sat i stack-filen. Manuel rollback kan køres med:
 
 ```bash
-docker service rollback mereoel_web
+sudo docker service rollback mereoel_web
 ```
