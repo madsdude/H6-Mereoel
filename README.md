@@ -25,6 +25,7 @@ Web-appen er statisk og serveres af en lille Nginx-container. I Swarm ligger der
 - `src/` indeholder lagerhjemmesiden og Nginx-konfigurationen for web-containeren.
 - `docs/SWARM.md` beskriver Swarm, DNS og drift.
 - `docs/TESTPLAN.md` beskriver test af build, load balancing og failover.
+- `docs/PORTAINER.md` beskriver installation af Portainer GUI til manager og worker-noder.
 - `.github/workflows/docker-image.yml` bygger og publicerer Docker-imaget til GHCR ved push til `main`.
 
 ## Lokal test
@@ -63,6 +64,23 @@ docker service ps mereoel_proxy
 ```
 
 Sitet eksponeres på port 80 på alle Swarm-noder via routing mesh. Sæt DNS-navnet, for eksempel `lager.mereoel.dk`, til en ekstern load balancer foran Swarm-noderne eller til flere A-records mod noderne i et labmiljø.
+
+## Portainer GUI
+
+Portainer kan bruges til at se manager, worker, stacks, services, replicas, logs og failover visuelt.
+
+```bash
+curl -L https://downloads.portainer.io/ce-lts/portainer-agent-stack.yml -o portainer-agent-stack.yml
+docker stack deploy -c portainer-agent-stack.yml portainer
+```
+
+Åbn derefter:
+
+```text
+https://<MANAGER-IP>:9443
+```
+
+Se den fulde guide i `docs/PORTAINER.md`.
 
 ## Fejlfinding
 
