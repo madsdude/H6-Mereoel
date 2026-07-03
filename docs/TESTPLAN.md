@@ -5,13 +5,13 @@ Brug denne testplan til at dokumentere, at hjemmesiden, Docker build, Swarm depl
 ## 1. Lokal Docker Compose test
 
 ```bash
-docker compose up --build
+sudo docker compose up --build
 ```
 
 Forventet:
 
-- `mereoel-web-1` bliver healthy.
-- `mereoel-proxy-1` bliver healthy.
+- `mereoel-local-web-1` bliver healthy.
+- `mereoel-local-proxy-1` bliver healthy.
 - Siden kan åbnes på `http://localhost:8080`.
 - Health endpoint svarer `ok`.
 
@@ -20,11 +20,17 @@ curl http://localhost:8080/healthz
 curl http://localhost:8080/upstream-health
 ```
 
+Ryd op efter lokal test, før du deployer med Swarm på samme maskine:
+
+```bash
+sudo docker compose down --remove-orphans
+```
+
 ## 2. Image build
 
 ```bash
-docker build -t ghcr.io/madsdude/h6-mereoel:test .
-docker run --rm -p 8081:8080 ghcr.io/madsdude/h6-mereoel:test
+sudo docker build -t ghcr.io/madsdude/h6-mereoel:test .
+sudo docker run --rm -p 8081:8080 ghcr.io/madsdude/h6-mereoel:test
 curl http://localhost:8081/healthz
 ```
 
@@ -33,9 +39,10 @@ Forventet: `curl` returnerer `ok`.
 ## 3. Swarm deploy
 
 ```bash
-docker swarm init --advertise-addr <MANAGER-IP>
-docker stack deploy -c docker-stack.yml mereoel
-docker service ls
+sudo docker swarm init --advertise-addr <MANAGER-IP>
+sudo docker build -t ghcr.io/madsdude/h6-mereoel:latest .
+sudo docker stack deploy -c docker-stack.yml mereoel
+sudo docker service ls
 ```
 
 Forventet:
@@ -43,6 +50,16 @@ Forventet:
 - `mereoel_web` viser `4/4` replicas.
 - `mereoel_proxy` viser `2/2` replicas.
 - `curl http://<NODE-IP>/healthz` returnerer `ok`.
+
+Hvis deploy fejler med `network with name mereoel_app already exists`, se typen og ryd op:
+
+```bash
+sudo docker network inspect mereoel_app --format '{{.Name}} {{.Driver}} {{.Scope}}'
+sudo docker compose down --remove-orphans
+sudo docker stack rm mereoel
+sudo docker network rm mereoel_app
+sudo docker stack deploy -c docker-stack.yml mereoel
+```
 
 ## 4. Load balancing
 
@@ -55,7 +72,7 @@ for i in {1..30}; do curl -s http://<NODE-IP>/healthz; done
 Forventet: Alle svarer `ok`. Kontroller access logs på proxy-tasks for at se trafik gennem flere proxy-containere:
 
 ```bash
-docker service logs --tail 50 mereoel_proxy
+sudo docker service logs --tail 50 mereoel_proxy
 ```
 
 ## 5. Container failover
@@ -63,18 +80,18 @@ docker service logs --tail 50 mereoel_proxy
 Find en web-container på en node og stop den:
 
 ```bash
-docker ps --filter name=mereoel_web
+sudo docker ps --filter name=mereoel_web
 ```
 
 På noden hvor containeren kører:
 
 ```bash
-docker kill <CONTAINER-ID>
+sudo docker kill <CONTAINER-ID>
 ```
 
 Forventet:
 
-- `docker service ps mereoel_web` viser, at en ny task startes.
+- `sudo docker service ps mereoel_web` viser, at en ny task startes.
 - Siden er fortsat tilgængelig via proxyen.
 - `curl http://<NODE-IP>/upstream-health` returnerer `ok` efter kort tid.
 
@@ -83,9 +100,9 @@ Forventet:
 Dræn en node for at simulere planlagt vedligehold:
 
 ```bash
-docker node update --availability drain <NODE-NAME>
-docker service ps mereoel_web
-docker service ps mereoel_proxy
+sudo docker node update --availability drain <NODE-NAME>
+sudo docker service ps mereoel_web
+sudo docker service ps mereoel_proxy
 ```
 
 Forventet:
@@ -97,7 +114,7 @@ Forventet:
 Aktiver noden igen:
 
 ```bash
-docker node update --availability active <NODE-NAME>
+sudo docker node update --availability active <NODE-NAME>
 ```
 
 ## 7. DNS test
