@@ -69,6 +69,13 @@ Hvis du vil bruge et andet image-tag:
 sudo MEREOEL_IMAGE=ghcr.io/madsdude/h6-mereoel:sha-<commit> docker stack deploy -c docker-stack.yml mereoel
 ```
 
+Når `deploy/nginx-proxy.conf` ændres, er det sikrest at fjerne stacken først, fordi Docker Swarm configs ikke altid opdateres rent på samme confignavn:
+
+```bash
+sudo docker stack rm mereoel
+sudo docker stack deploy -c docker-stack.yml mereoel
+```
+
 ## Services
 
 Stacken opretter to services:
@@ -121,6 +128,34 @@ sudo docker ps -a --filter network=mereoel_app
 sudo docker service ls
 ```
 
+## Fejlfinding: healthz virker, men forsiden giver 502
+
+Hvis `curl http://10.1.10.10/healthz` svarer `ok`, men `curl http://10.1.10.10` giver `502 Bad Gateway`, er proxyen startet, men den kan ikke nå web-servicen.
+
+Kontroller først web og proxy:
+
+```bash
+sudo docker service ls
+sudo docker service ps mereoel_web
+sudo docker service ps mereoel_proxy
+sudo docker service logs --tail 50 mereoel_proxy
+```
+
+Ryd stacken og deploy igen efter et `git pull`, så den nye Nginx-konfig bliver brugt:
+
+```bash
+sudo docker stack rm mereoel
+sudo docker build -t ghcr.io/madsdude/h6-mereoel:latest .
+sudo docker stack deploy -c docker-stack.yml mereoel
+```
+
+Test derefter upstream gennem proxyen:
+
+```bash
+curl http://10.1.10.10/upstream-health
+curl http://10.1.10.10
+```
+
 ## DNS og fælles adgangsnavn
 
 Anbefalet produktion:
@@ -142,7 +177,7 @@ Undgå at pege DNS på kun én enkelt node, hvis høj oppetid er målet.
 Trafikken fordeles i to lag:
 
 1. Swarm routing mesh fordeler trafik fra port 80 til en aktiv `proxy` task.
-2. Nginx proxyen sender trafik til `web:8080`, hvor Swarm service VIP fordeler videre til de 4 web-replicas.
+2. Nginx proxyen sender trafik til `mereoel_web:8080`, hvor Swarm service VIP fordeler videre til de 4 web-replicas.
 
 ## Failover
 
